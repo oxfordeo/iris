@@ -2,9 +2,10 @@ from collections import defaultdict
 from datetime import timedelta
 
 import flask
+from flask_login import login_required, current_user
 from sqlalchemy import func
 
-from iris.user import requires_admin, requires_auth
+from iris.user import roles_required
 from iris.models import db, Action, User
 from iris.project import project
 
@@ -16,20 +17,16 @@ admin_app = flask.Blueprint(
 
 @admin_app.route('/', methods=['GET'])
 def index():
-    user_id = flask.session.get('user_id', None)
-    if user_id is None:
-        return flask.render_template('admin/index.html', user=None)
 
-    user = User.query.get(user_id)
-    if user is None:
+    if current_user.is_anonymous:
         return flask.render_template('admin/index.html', user=None)
 
     return flask.redirect(flask.url_for('admin.users'))
 
 @admin_app.route('/users', methods=['GET'])
-@requires_auth
+@login_required
+@roles_required('admin')
 def users():
-    user = User.query.get(flask.session.get('user_id'))
 
     order_by = flask.request.args.get('order_by', 'id')
     ascending = flask.request.args.get('ascending', 'true')
@@ -41,15 +38,15 @@ def users():
     else:
         users = users.order_by(getattr(User, order_by).desc()).all()
 
-    users_json = [user.to_json() for user in users]
+    users_json = [u.to_json() for u in users]
 
     html = flask.render_template('admin/users.html', users=users_json, order_by=order_by, ascending=ascending)
-    return flask.render_template('admin/index.html', user=user, page=flask.Markup(html))
+    return flask.render_template('admin/index.html', user=current_user, page=flask.Markup(html))
 
 @admin_app.route('/actions/<type>', methods=['GET'])
-@requires_auth
+@login_required
+@roles_required('admin')
 def actions(type):
-    user = User.query.get(flask.session.get('user_id'))
 
     order_by = flask.request.args.get('order_by', 'user_id')
     ascending = flask.request.args.get('ascending', 'true')
@@ -74,12 +71,12 @@ def actions(type):
         'admin/actions.html', action_type=type, actions=actions_json,
         image_stats=image_stats, order_by=order_by, ascending=ascending
     )
-    return flask.render_template('admin/index.html', user=user, page=flask.Markup(html))
+    return flask.render_template('admin/index.html', user=current_user, page=flask.Markup(html))
 
 @admin_app.route('/images', methods=['GET'])
-@requires_auth
+@login_required
+@roles_required('admin')
 def images():
-    user = User.query.get(flask.session.get('user_id'))
 
     order_by = flask.request.args.get('order_by', 'user_id')
     ascending = flask.request.args.get('ascending', 'true')
@@ -117,4 +114,4 @@ def images():
     html = flask.render_template(
         'admin/images.html', images=images, order_by=order_by, ascending=ascending
     )
-    return flask.render_template('admin/index.html', user=user, page=flask.Markup(html))
+    return flask.render_template('admin/index.html', user=current_user, page=flask.Markup(html))

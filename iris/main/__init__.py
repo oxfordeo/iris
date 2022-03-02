@@ -2,13 +2,13 @@ import io
 import json
 
 import flask
+from flask_login import login_required, current_user
 import numpy as np
 from PIL import Image as PILImage
 from skimage.transform import resize
 
 from iris.models import db, Action
 from iris.project import project
-from iris.user import requires_auth
 
 main_app = flask.Blueprint(
     'main', __name__,
@@ -28,9 +28,8 @@ def image(image_id, view):
     return array_to_png(image)
 
 @main_app.route('/image_info/<image_id>')
-@requires_auth
+@login_required
 def image_info(image_id):
-    user_id = flask.session['user_id']
 
     actions = Action.query.filter_by(image_id=image_id).all()
     # Sort actions by type:
@@ -46,7 +45,7 @@ def image_info(image_id):
             'current_user_score': None
         }
         for t_action in t_actions:
-            if t_action.user_id == user_id:
+            if t_action.user_id == current_user.id:
                 data[type]['current_user_score'] = t_action.score
                 data[type]['current_user_score_unverified'] = t_action.unverified
                 break
@@ -55,16 +54,15 @@ def image_info(image_id):
     return flask.jsonify(data)
 
 @main_app.route('/get_action_info/<image_id>/<action_type>')
-@requires_auth
+@login_required
 def get_action_info(image_id, action_type):
-    user_id = flask.session['user_id'];
 
-    action = Action.query.filter_by(image_id=image_id, user_id=user_id, type=action_type).first_or_404()
+    action = Action.query.filter_by(image_id=image_id, user_id=current_user.id, type=action_type).first_or_404()
 
     return flask.jsonify(action.to_json())
 
 @main_app.route('/set_action_info/<action_id>', methods=['POST'])
-@requires_auth
+@login_required
 def set_action_info(action_id):
     action = Action.query.get_or_404(action_id);
 

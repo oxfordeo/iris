@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from random import randint
 
+from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from iris import db, project
@@ -20,7 +21,7 @@ class JsonSerializable:
 
         return json
 
-class User(JsonSerializable, db.Model):
+class User(UserMixin, JsonSerializable, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(128), index=True, nullable=True)

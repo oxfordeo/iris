@@ -13,6 +13,7 @@ import yaml
 
 import iris.extensions
 from iris.project import project
+from iris.login import login_manager
 
 def get_demo_file(example=None):
     demo_file = join(
@@ -133,6 +134,7 @@ db.create_all()
 db.session.commit()
 
 register_extensions(app)
+login_manager.init_app(app)
 
 
 if __name__ == '__main__':
