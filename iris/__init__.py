@@ -1,4 +1,5 @@
 import argparse
+from datetime import timedelta
 import json
 from getpass import getpass
 from os.path import basename, dirname, exists, isabs, join
@@ -7,6 +8,7 @@ import sys
 import webbrowser
 
 import flask
+from flask_login import current_user
 from flask_sqlalchemy import SQLAlchemy
 import numpy as np
 import yaml
@@ -44,7 +46,7 @@ def parse_cmd_line():
     elif args.mode == "label":
         if not args.project:
             raise Exception("Label mode require a project file!")
-    else:
+    else:flask_login
         raise Exception(f"Unknown mode '{args.mode}'!")
 
     return vars(args)
@@ -122,6 +124,7 @@ def register_extensions(app):
     from iris.user import user_app
     app.register_blueprint(user_app, url_prefix="/user")
 
+
 if os.environ.get("PROJECTFILE") is None:
     project_file = get_demo_file()
 else:
@@ -135,6 +138,13 @@ db.session.commit()
 
 register_extensions(app)
 login_manager.init_app(app)
+
+@app.before_request
+def before_request():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=15)
+    flask.session.modified = True
+    flask.g.user = current_user
 
 
 if __name__ == '__main__':
