@@ -8,6 +8,7 @@ from pprint import pprint
 
 import lightgbm as lgb
 import flask
+from flask_login import login_required, current_user
 import numpy as np
 from scipy.ndimage import convolve, minimum_filter, maximum_filter
 from skimage.io import imread, imsave
@@ -17,7 +18,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score
 import yaml
 
-from iris.user import requires_auth
 from iris.models import db, User, Action
 from iris.project import project
 
@@ -34,11 +34,10 @@ def index():
     if image_id is None:
         image_id = project.get_start_image_id()
 
-        user_id = flask.session.get('user_id', None)
-        if user_id:
+        if current_user.is_authenticated:
             # Get the mask that the user worked on the last time
             last_mask = Action.query \
-                .filter_by(user_id=user_id) \
+                .filter_by(user_id=current_user.id) \
                 .order_by(Action.last_modification.desc()) \
                 .first()
 
@@ -55,10 +54,9 @@ def index():
     )
 
 @segmentation_app.route('/next_image', methods=['GET'])
-@requires_auth
+@login_required
 def next_image():
-    user = User.query.get(flask.session['user_id'])
-    project.set_image_seed(user.image_seed)
+    project.set_image_seed(current_user.image_seed)
 
     image_id = project.get_next_image(
         flask.request.args.get('image_id', project.get_start_image_id())
@@ -69,10 +67,9 @@ def next_image():
     )
 
 @segmentation_app.route('/previous_image', methods=['GET'])
-@requires_auth
+@login_required
 def previous_image():
-    user = User.query.get(flask.session['user_id'])
-    project.set_image_seed(user.image_seed)
+    project.set_image_seed(current_user.image_seed)
 
     image_id = project.get_previous_image(
         flask.request.args.get('image_id', project.get_start_image_id())
@@ -217,12 +214,11 @@ def encode_mask(mask, mode='binary'):
     return encoded_mask.astype(np.uint8)
 
 @segmentation_app.route('/load_mask/<image_id>')
-@requires_auth
+@login_required
 def load_mask(image_id):
-    user_id = flask.session.get('user_id')
 
     try:
-        final_mask, user_mask = read_masks(image_id, user_id)
+        final_mask, user_mask = read_masks(image_id, current_user.id)
 
         data = np.concatenate([final_mask.ravel(), user_mask.ravel()])
         data = np.pad(data, 1, constant_values=(254, 254))
@@ -236,11 +232,10 @@ def load_mask(image_id):
         return flask.make_response("No user mask available!", 404)
 
 @segmentation_app.route('/save_mask/<image_id>', methods=['POST'])
-@requires_auth
+@login_required
 def save_mask(image_id):
-    user_id = flask.session.get('user_id')
 
-    print('SAVING BY', user_id)
+    print('SAVING BY', current_user.name)
 
     t = time.time()
     data = np.frombuffer(flask.request.data, dtype=np.uint8)
@@ -274,7 +269,7 @@ def save_mask(image_id):
     user_mask = data[1+mask_length:-1].astype(np.bool)
     user_mask = user_mask.reshape(project['segmentation']['mask_shape'][::-1])
 
-    final_mask_file, user_mask_file = get_mask_filenames(image_id, user_id)
+    final_mask_file, user_mask_file = get_mask_filenames(image_id, current_user.id)
     os.makedirs(dirname(final_mask_file), exist_ok=True)
 
     final_mask = encode_mask(final_mask, mode='binary')
@@ -283,12 +278,11 @@ def save_mask(image_id):
     np.save(user_mask_file, user_mask.astype(bool), allow_pickle=False)
 
     # Update the database:
-    user = User.query.get(user_id)
     action = Action.query\
-        .filter_by(user=user, image_id=image_id, type="segmentation")\
+        .filter_by(user=current_user, image_id=image_id, type="segmentation")\
         .first()
     if not action:
-        action = Action(user=user, image_id=image_id, type="segmentation")
+        action = Action(user=current_user, image_id=image_id, type="segmentation")
     action.last_modification = datetime.utcnow()
     db.session.add(action)
     db.session.commit()
@@ -307,9 +301,9 @@ def image_dict_to_array(image_dict):
     )
 
 @segmentation_app.route('/predict_mask/<image_id>', methods=['POST'])
-@requires_auth
+@login_required
 def predict_mask(image_id):
-    config = project.get_user_config(flask.session['user_id'])
+    config = project.get_user_config(current_user.id)
     config = config['segmentation']
 
     print('Fit options:', config)
