@@ -7,6 +7,31 @@ from oxeobin.sync_project import SyncProject
 def cli():
     pass
 
+
+@cli.command()
+@click.argument('name')
+@click.option('--projects_root', type=str, default=os.path.join(os.getcwd(),'projects'))
+def initialise_project(name, projects_root):
+    """ Initialise the project db and admin user.
+    
+    args
+    ----
+    name (str): The name of the project
+    --projects_root (str): The root directory of the project
+    
+    returns
+    -------
+    1
+    """
+    
+    os.environ['PROJECTFILE'] = os.path.join(projects_root,name,name+'.json')
+    from iris import app, db, create_default_admin
+    
+    create_default_admin(app,db)
+    
+    return 1
+
+
 @cli.command()
 @click.argument('constellation')
 @click.argument('tiles')

@@ -1,10 +1,10 @@
 authentication_required: true
 classes:
 - colour:
-  - 255
+  - 0
   - 255
   - 0
-  - 0
+  - 70
   description: Clear pixels where water is not present.
   name: Not-Water
   user_colour:
@@ -20,7 +20,7 @@ classes:
   description: Clear pixels where water is present.
   name: Water
 - colour:
-  - 0
+  - 255
   - 255
   - 0
   - 70
@@ -37,6 +37,7 @@ images:
   metadata: images/{id}/metadata.json
   path:
     landsat_5: images/{id}/landsat-5.npy
+    blank: blank.npy
   shape:
   - 333
   - 333
@@ -55,10 +56,17 @@ segmentation:
   unverified_threshold: 1
 view_groups:
   default:
-  - Cirrus
+  - Mask
   - RGB
   - NDWI
 views:
+  Mask:
+    data: 
+    - $blank.B3
+    - $blank.B2
+    - $blank.B1
+    description: A blank image to show the mask so far.
+    type: image
   Cirrus:
     cmap: jet
     data: $landsat_5.B5**0.8*5
