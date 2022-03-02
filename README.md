@@ -21,6 +21,14 @@ Make projects:
 
     python oxeobin/cli.py make-project landsat-8 18_L_10000_24_895,18_L_10000_25_891 test 10 gs://oxeo-water/prod 8000
     
+Initialise projects:
+
+    python oxeobin/cli.py initialise-project test-landsat-8
+    
 Sync projects:
 
     python oxeobin/cli.py sync-project /home/lucas/iris/projects/s2-test-sentinel-2 gs://oxeo-water/prod test-s2-gt
+    
+With Gunicorn:
+
+    gunicorn -b 127.0.0.1:5000 --env PROJECTFILE="/home/lucas/iris/projects/test-landsat-7/test-landsat-7.json" wsgi:app

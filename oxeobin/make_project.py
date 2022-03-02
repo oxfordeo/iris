@@ -1,5 +1,6 @@
 from typing import List, Optional
 import os, yaml, json
+import numpy as np
 
 from oxeobin.sampling import _random_sample, _random_sample_in_tiles
 
@@ -75,6 +76,12 @@ class ProjectBuilder:
         
         # copy in the cfg
         json.dump(self.cfg, open(os.path.join(self.projects_root,self.cfg['name'],self.cfg['name']+'.json'),'w'))
+        
+        # build blank
+        blank_arr = np.ones((*self.cfg['images']['shape'],3)).astype(float)
+        np.save(os.path.join(self.projects_root,self.cfg['name'],'blank.npy'),blank_arr)
+        
+        return 1
 
 if __name__=="__main__":
     

@@ -374,7 +374,7 @@ class Project:
                 1
                 )
         else:
-            linear_scale = lambda z: (z - z.min())/(z.max()-z.min())
+            linear_scale = lambda z: (z - z.min())/(z.max()-z.min()) if z.max()!=z.min() else z
         rgb_bands = list(map(linear_scale, rgb_bands))
 
         if len(rgb_bands) == 1:
