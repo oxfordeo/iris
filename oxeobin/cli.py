@@ -1,4 +1,5 @@
 import click
+import json
 import os
 from oxeobin.make_project import ProjectBuilder
 from oxeobin.sync_project import SyncProject
@@ -38,11 +39,10 @@ def initialise_project(name, projects_root):
 @click.argument('name')
 @click.argument('n_samples', type=int)
 @click.argument('storage_root')
-@click.argument('port')
 @click.option('--sampling', type=str, default='random')
 @click.option('--projects_root', type=str, default=os.path.join(os.getcwd(),'projects'))
 @click.option('--cfg', default=None)
-def make_project(constellation, tiles, name, n_samples, storage_root, port, sampling, projects_root, cfg):
+def make_project(constellation, tiles, name, n_samples, storage_root, sampling, projects_root, cfg):
     """ 
     Set up a new labelling project.
     
@@ -63,16 +63,18 @@ def make_project(constellation, tiles, name, n_samples, storage_root, port, samp
     -------
     1
     """
-    
-    tiles = tiles.split(',')
-    
+
+    if os.path.exists(tiles):
+        tiles = json.load(open(tiles,'r'))
+    else:
+        tiles = tiles.split(',')
+
     ProjectBuilder(
         constellation=constellation,
         tiles=tiles,
         name=name,
         n_samples=n_samples,
         storage_root=storage_root,
-        port=port,
         sampling=sampling,
         projects_root=projects_root,
         cfg=cfg
@@ -100,11 +102,15 @@ def sync_project(project_root, storage_root, mask_name):
     1
     """
     
-    SyncProject(
+    kept_metadata = SyncProject(
         project_root = project_root, 
         storage_root = storage_root, 
         mask_name = mask_name
     ).run()
+
+    project_name = project_root.split('/')[-1]
+
+    json.dump(kept_metadata, open(f'./{project_name}_{mask_name}.json','w'))
     
     return 1
     

@@ -44,6 +44,7 @@ images:
   thumbnails: images/{id}/thumbnail.png
 name: MyProject-sentinel-2
 segmentation:
+  prioritise_unmarked_images: true
   mask_area:
   - 0
   - 0

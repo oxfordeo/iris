@@ -51,7 +51,23 @@ def geom84_from_id(_id):
 
     return transform(transform_utm2ll, geom_utm)
 
+def check_zarr(storage_root, tile, constellation):
+    try:
+        z =  zarr.open(
+            gcsfs.GCSMap(
+                os.path.join(
+                    storage_root,
+                    tile,
+                    constellation,
+                    'timestamps',
+                )
+            ), 'r')
+        return True
+    except:
+        return False
+
 def get_timestamps(storage_root, tile, constellation):
+    print (f'{storage_root=},{tile=},{constellation=}')
     
     return zarr.open(
         gcsfs.GCSMap(
@@ -160,7 +176,7 @@ def _random_sample(storage_root, image_root,constellation, tiles, N):
 def _random_sample_in_tiles(storage_root, image_root,constellation, tiles, N):
         
     # collect all timestamps
-    all_timestamps = {tt:pd.to_datetime(get_timestamps(tile,constellation,storage_root)).date for tt in tiles}
+    all_timestamps = {tt:pd.to_datetime(get_timestamps(storage_root,tt,constellation)).date for tt in tiles}
     
     tile_records = {tt:[{'tile':tt,'tile_idx':i_dt, 'datetime':dt} for i_dt, dt in enumerate(vv)] for tt,vv in all_timestamps.items()} 
     

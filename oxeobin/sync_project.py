@@ -49,31 +49,42 @@ class SyncProject:
         
         # collect_metas from /images
         image_paths = glob.glob(os.path.join(self.project_root,'images','*'))
-        print ('image paths')
-        print (image_paths)
+        print (f'project_root: {self.project_root}')
+        print ('project name')
+        print (self.project_name)
+        print ('loading metadata...')
+        metadatas = {}
 
-        metadatas = {os.path.split(f)[-1]:json.load(open(os.path.join(f,'metadata.json'),'r')) for f in image_paths}
-
+        for f in image_paths:
+            image_id = os.path.split(f)[-1]
+            seg_fname = os.path.join(self.project_root,f'{self.project_name}.iris','segmentation',image_id,'1_final.npy')
+            # print (seg_fname)
+            if os.path.exists(seg_fname):
+                #print (f)
+                #print (seg_fname)
+                #print (image_id)
+                metadatas[image_id] = json.load(open(os.path.join(f,'metadata.json'),'r'))
+        print ('N syncs',len(metadatas.keys()))
+        print ('getting zarr masks')
         tile_constellations = list(set([(vv["tile"],vv["spacecraft_id"]) for kk, vv in metadatas.items()]))
 
         # open zarrs
         zarr_masks = self.get_zarr_masks(tile_constellations)
 
+        print ('syncing...')
         # for images
         not_synced = 0
         for image_id, metadata in tqdm(metadatas.items()):
-            seg_fname = os.path.join(self.project_root,f'{self.project_name}.iris','segmentation',image_id,'2_final.npy')
-            if os.path.exists(seg_fname):
 
-                arr = np.load(seg_fname).argmax(axis=2).astype(np.uint8)
+            seg_fname = os.path.join(self.project_root,f'{self.project_name}.iris','segmentation',image_id,'1_final.npy')
 
-                zarr_masks[(metadata['tile'],metadata['spacecraft_id'])][metadata['tile_idx'],:,:] = arr
-            else:
-                not_synced+=1
+            arr = np.load(seg_fname).argmax(axis=2).astype(np.uint8)
 
-        print (f'Not synced: {not_synced} / {len(metadatas.keys())}')
+            zarr_masks[(metadata['tile'],metadata['spacecraft_id'])][metadata['tile_idx'],:,:] = arr
 
-        return 1
+        print (f'Synced: {len(metadatas.keys())} / {len(image_paths)}')
+
+        return metadatas
             
             
             

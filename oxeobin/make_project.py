@@ -2,7 +2,7 @@ from typing import List, Optional
 import os, yaml, json
 import numpy as np
 
-from oxeobin.sampling import _random_sample, _random_sample_in_tiles
+from oxeobin.sampling import _random_sample, _random_sample_in_tiles, check_zarr
 
 # build config json
 # populate project images
@@ -20,7 +20,6 @@ class ProjectBuilder:
         name: str,
         n_samples: int,
         storage_root: str,
-        port: int = 8000,
         sampling: str = 'random',
         projects_root: str = os.path.join(os.getcwd(),'projects'),
         cfg: Optional[str] = None,
@@ -29,7 +28,10 @@ class ProjectBuilder:
         assert sampling in ['random','random_in_tiles'], "'sampling' must be one of [random, random_in_tiles]"
         
         self.constellation = constellation
-        self.tiles = tiles
+
+        print (f'checking {len(tiles)} tiles')
+        self.tiles = [tt for tt in tiles if check_zarr(storage_root, tt, constellation)]
+        print (f'got {len(self.tiles)} tiles')
         self.projects_root = projects_root
         self.sampling=sampling
         self.n_samples = n_samples
@@ -59,7 +61,7 @@ class ProjectBuilder:
             )
             
         elif self.sampling == 'random_in_tiles':
-            _random_sample_within_tiles(
+            _random_sample_in_tiles(
                 storage_root = self.storage_root,
                 image_root = os.path.join(self.projects_root,self.cfg['name'],'images'),
                 constellation=self.constellation, 
