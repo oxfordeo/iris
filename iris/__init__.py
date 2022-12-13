@@ -5,8 +5,11 @@ from os.path import basename, dirname, exists, isabs, join
 import os
 import sys
 import webbrowser
+from datetime import timedelta
 
 import flask
+from flask_login import current_user
+from flask import Flask, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 import numpy as np
 import yaml
@@ -60,9 +63,14 @@ def create_app(project_file):
     project.debug = False
 
     # Create the flask app:
-    app = flask.Flask(__name__)
+    app = Flask(__name__)
     # app.config['TESTING'] = True
     app.config['EXPLAIN_TEMPLATE_LOADING'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = False
+    if os.environ.get('APPLICATION_ROOT') is not None:
+        app.config['SESSION_COOKIE_PATH'] = os.environ.get('APPLICATION_ROOT')
+    #app.config['SESSION_COOKIE_SAMESITE'] = "Lax"
+    #app.config['SESSION_COOKIE_SECURE'] = True
 
     # We need this secret key to encrypt cookies
     app.secret_key = os.urandom(16)
@@ -135,7 +143,6 @@ db.session.commit()
 
 register_extensions(app)
 login_manager.init_app(app)
-
 
 if __name__ == '__main__':
     run_app()

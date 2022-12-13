@@ -1,9 +1,12 @@
 from functools import wraps
+import os
+import sys
 import json
 import random
 from os.path import dirname, join
 
 import flask
+from flask import session
 from flask_login import login_required, current_user, login_user, logout_user
 from sqlalchemy import func
 from validate_email import validate_email
@@ -22,19 +25,31 @@ user_app = flask.Blueprint(
 
 @login_manager.user_loader
 def load_user(id):
+    print ('user id',id, file=sys.stderr, flush=True)
     return User.query.get(int(id))
 
 
 @login_manager.request_loader
 def load_user_from_request(request):
-    auth = request.authorization
-    if not auth:
+    token = request.headers.get("token")
+
+    user_id = request.cookies.get('userID')
+
+    if not user_id:
         return None
-    user = User.query.filter_by(username=auth.username).first()
-    if user is None:
-        user = User.query.filter_by(email=auth.username).first()
-    if not user or not user.check_password(auth.password):
+    user = User.query.get(int(user_id))
+    if not user:
         return None
+
+    #print ('cookies', request.cookies.keys(), file=sys.stderr, flush=True)
+    #auth = request.authorization
+    #if not auth:
+    #    return None
+    #user = User.query.filter_by(username=auth.username).first()
+    #if user is None:
+    #    user = User.query.filter_by(email=auth.username).first()
+    #if not user or not user.check_password(auth.password):
+    #    return None
     return user
 
 @login_manager.unauthorized_handler
@@ -238,13 +253,21 @@ def login():
 
     login_user(user)
 
-    return flask.make_response("Successful login!")
+    resp = flask.make_response("Successful login!")
+    if os.environ.get('APPLICATION_ROOT') is not None:
+        resp.set_cookie('userID',str(user.id).encode('utf-8'),path=os.environ.get('APPLICATION_ROOT'))
+    else:
+        resp.set_cookie('userID',str(user.id).encode('utf-8'))
+
+    return resp
 
 
 @user_app.route('/logout')
 def logout():
     logout_user()
 
-    return flask.make_response("Successful logout!")
+    resp = flask.make_response("Successful logout!")
 
-    
+    resp.delete_cookie('userID')
+
+    return resp
